@@ -27,12 +27,12 @@ task = "imagesampler-top"
 dfs = []
 for vsn in VSNS:
     print("Querying {} ...".format(vsn))
-    resp = sage_data_client.query_downloads(
+    data = sage_data_client.query_downloads(
         start=start,
         end=end,
         filter={"vsn": vsn, "task": task},
     )
-    dfs.append(resp.df)
+    dfs.append(data.df)
 
 combined = sage_data_client.DownloadResponse(pd.concat(dfs, ignore_index=True))
 print("Found {} file(s) across {} node(s).".format(len(combined), len(VSNS)))

@@ -101,17 +101,17 @@ class DownloadResponse:
 
     Examples
     --------
-    >>> resp = sage_data_client.query_downloads(start="-1h", filter={"vsn": "W020"})
-    >>> print(len(resp), "files found")
+    >>> data = sage_data_client.query_downloads(start="-1h", filter={"vsn": "W020"})
+    >>> print(len(data), "files found")
 
     >>> # download with default layout ({vsn}/{filename})
-    >>> resp.download_all(dest="./data")
+    >>> data.download_all(dest="./data")
 
     >>> # download with custom layout
-    >>> resp.download_all(dest="./data", layout="{date}/{vsn}/{filename}")
+    >>> data.download_all(dest="./data", layout="{date}/{vsn}/{filename}")
 
     >>> # iterate and download individually
-    >>> for record in resp:
+    >>> for record in data:
     ...     record.download(dest="./data")
     """
 
@@ -146,12 +146,12 @@ class DownloadResponse:
 
         Examples
         --------
-        >>> resp = sage_data_client.query_downloads(start="-1h", filter={"vsn": "W020"})
-        >>> resp.save("downloads.csv")
+        >>> data = sage_data_client.query_downloads(start="-1h", filter={"vsn": "W020"})
+        >>> data.save("downloads.csv")
         >>>
         >>> # later, in another session:
-        >>> resp = sage_data_client.load_downloads("downloads.csv")
-        >>> resp.download_all(dest="./data")
+        >>> data = sage_data_client.load_downloads("downloads.csv")
+        >>> data.download_all(dest="./data")
         """
         dest = Path(path)
         dest.parent.mkdir(parents=True, exist_ok=True)
@@ -273,14 +273,14 @@ def query_downloads(
     --------
     >>> import sage_data_client
     >>>
-    >>> resp = sage_data_client.query_downloads(
+    >>> data = sage_data_client.query_downloads(
     ...     start="-1h",
     ...     filter={"vsn": "W020"},
     ... )
-    >>> print(resp)
+    >>> print(data)
     DownloadResponse(42 records)
     >>>
-    >>> resp.download_all(dest="./data", layout="{date}/{vsn}/{filename}")
+    >>> data.download_all(dest="./data", layout="{date}/{vsn}/{filename}")
     """
     merged_filter = {"name": "upload"}
     if filter:
@@ -318,16 +318,16 @@ def load_downloads(path: str) -> "DownloadResponse":
 
     Examples
     --------
-    >>> resp = sage_data_client.load_downloads("downloads.csv")
-    >>> print(resp)
+    >>> data = sage_data_client.load_downloads("downloads.csv")
+    >>> print(data)
     DownloadResponse(42 records)
-    >>> resp.download_all(dest="./data")
+    >>> data.download_all(dest="./data")
     """
     src = Path(path)
     if not src.exists():
         raise FileNotFoundError(
             "No such file: '{}'\n"
-            "Save a URL list first with: resp.save('{}')".format(src, src)
+            "Save a URL list first with: data.save('{}')".format(src, src)
         )
 
     try:

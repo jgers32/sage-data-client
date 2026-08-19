@@ -93,8 +93,8 @@ def cmd_download(args):
             f["vsn"] = vsn
         label = "vsn={}, ".format(vsn) if vsn else ""
         print("Querying uploads ({}{} to {})...".format(label, start, end or "now"))
-        resp = query_downloads(start=start, end=end, filter=f or None)
-        dfs.append(resp.df)
+        data = query_downloads(start=start, end=end, filter=f or None)
+        dfs.append(data.df)
 
     combined = DownloadResponse(pd.concat(dfs, ignore_index=True))
 

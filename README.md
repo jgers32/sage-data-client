@@ -1,6 +1,6 @@
 # Sage Data Client
 
-This is the official Sage Python data API client. It makes querying sensor data and downloading uploaded files (images, audio, etc.) straightforward.
+This is the official Sage Python data API client. It makes querying sensor data and downloading files (images, audio, etc.) straightforward.
 
 ## Installation
 
@@ -8,7 +8,7 @@ This is the official Sage Python data API client. It makes querying sensor data 
 pip3 install sage-data-client
 ```
 
-If you prefer to install this package into a Python virtual environment or are unable to install it system wide, you can use the [venv](https://docs.python.org/3/library/venv.html) module as follows:
+If you prefer to install this package into a Python virtual environment or are unable to install it system wide (new standard in Python 3.13+), you can use the [venv](https://docs.python.org/3/library/venv.html) module as follows:
 
 ```sh
 # 1. Create a new virtual environment called my-venv.
@@ -27,7 +27,7 @@ Note: If you are using Linux, you may need to install the `python3-venv` package
 
 ## Downloading Files
 
-Sage nodes upload files (images, audio, etc.) that can be queried and downloaded. Access requires a Sage portal account.
+Sage nodes upload files (images, audio, etc.) that can be queried and downloaded. However, access to such data can require a Sage portal account and requesting access. Please refer to [Getting Started with Sage](https://sagecontinuum.org/docs/getting-started) for more information. 
 
 ### 1. Save your credentials
 
@@ -43,7 +43,7 @@ This prompts for your username and access token from [portal.sagecontinuum.org](
 # everything uploaded in the last hour from node W020
 sagecli download --start -1h --vsn W020
 
-# all files from a specific day
+# all files from a specific day & saving to specific destination (./data)
 sagecli download --date 2026-07-01 --vsn W020 --dest ./data
 
 # a date range (both endpoints inclusive)
@@ -67,7 +67,7 @@ sagecli download --date 2026-07-01 --vsn W020 --layout "{date}/{vsn}/{task}/{fil
 
 Available layout variables: `{vsn}`, `{node}`, `{filename}`, `{date}`, `{datetime}`, `{task}`, and any other metadata field present on the record.
 
-Run `sagecli download --help` for the full list of options.
+> Run `sagecli download --help` for the full list of options.
 
 ### How downloads work and server load
 
@@ -76,7 +76,7 @@ When you run a download, two things happen:
 1. **One query to the data API** to find matching upload records. This is the same lightweight request used by `query()` — it returns metadata only, no files.
 2. **One HTTP request per file** to the storage server to fetch the actual content.
 
-To avoid overloading the server, downloads are capped at **4 concurrent requests** by default. You can lower this with `--workers` if you want to be more conservative, or raise it slightly for faster bulk downloads on a good connection. There is no enforced rate limit, so please be considerate of others sharing the server.
+To avoid overloading the server, downloads are capped at **4 concurrent requests** by default. You can lower this with `--workers` if you want to be more conservative, or raise it slightly for faster bulk downloads on a good connection. Please be considerate of both others and the server itself if you set the number of workers beyond the default. 
 
 If a download fails (network drop, temporary server error), it is **retried automatically** up to 5 times with exponential backoff — waiting roughly 1s, 2s, 4s, 8s between attempts. Client errors (e.g. 404 Not Found, 403 Forbidden) are not retried since they won't resolve on their own.
 
@@ -88,33 +88,33 @@ If you run the same download command twice, **existing files are skipped** by de
 import sage_data_client
 
 # query uploads and get a downloadable response
-resp = sage_data_client.query_downloads(
+data = sage_data_client.query_downloads(
     start="-1h",
     filter={"vsn": "W020"},
 )
 
-print(resp)  # DownloadResponse(27 records)
+print(data)  # DownloadResponse(27 records)
 
 # download all files (credentials loaded automatically from ~/.sage/credentials)
-resp.download_all(dest="./data")
+data.download_all(dest="./data")
 
 # custom layout
-resp.download_all(dest="./data", layout="{date}/{vsn}/{task}/{filename}")
+data.download_all(dest="./data", layout="{date}/{vsn}/{task}/{filename}")
 
 # iterate and download individually
-for record in resp:
+for record in data:
     print(record.vsn, record.filename, record.url)
     record.download(dest="./data")
 
 # save the URL list now and download later (useful for large datasets)
-resp.save("downloads.csv")
+data.save("downloads.csv")
 ```
 
 To reload and download in a later session:
 
 ```python
-resp = sage_data_client.load_downloads("downloads.csv")
-resp.download_all(dest="./data")
+data = sage_data_client.load_downloads("downloads.csv")
+data.download_all(dest="./data")
 ```
 
 ---
@@ -189,11 +189,11 @@ Contributions welcome — add to [examples/contrib](https://github.com/sageconti
 
 Query sensor measurements and return a pandas DataFrame.
 
-* `start` — start timestamp, required. Relative (`"-1h"`, `"-7d"`) or absolute (`"2026-07-01"`, `"2026-07-01T12:00:00Z"`).
-* `end` — end timestamp. Same formats as `start`. Default: now.
-* `filter` — dict of metadata filters (e.g. `{"name": "env.temperature", "vsn": "W020"}`).
-* `head` — limit to earliest N records.
-* `tail` — limit to latest N records.
+* `start`: start timestamp, required. Relative (`"-1h"`, `"-7d"`) or absolute (`"2026-07-01"`, `"2026-07-01T12:00:00Z"`).
+* `end`: end timestamp. Same formats as `start`. Default: now.
+* `filter`: dict of metadata filters (e.g. `{"name": "env.temperature", "vsn": "W020"}`).
+* `head`: limit to earliest N records.
+* `tail`: limit to latest N records.
 
 ### `query_downloads(start, end, filter, head, tail)`
 
@@ -203,11 +203,11 @@ Query uploaded files and return a `DownloadResponse`. Same parameters as `query(
 
 Returned by `query_downloads()`.
 
-* `len(resp)` — number of records.
-* `resp.df` — the underlying pandas DataFrame with URLs and metadata. Nothing is downloaded until you call `download_all()` or `download()` on individual records.
-* `iter(resp)` — iterate over `DownloadRecord` objects.
-* `resp.download_all(dest=".", layout="{vsn}/{filename}", workers=4, skip_existing=True)` — download all files.
-* `resp.save("downloads.csv")` — save the URL list to CSV for downloading later.
+* `len(data)` — number of records.
+* `data.df` — the underlying pandas DataFrame with URLs and metadata. Nothing is downloaded until you call `download_all()` or `download()` on individual records.
+* `iter(data)` — iterate over `DownloadRecord` objects.
+* `data.download_all(dest=".", layout="{vsn}/{filename}", workers=4, skip_existing=True)` — download all files.
+* `data.save("downloads.csv")` — save the URL list to CSV for downloading later.
 
 ### `DownloadRecord`
 
@@ -224,11 +224,11 @@ Reload a previously saved URL list and return a `DownloadResponse`.
 
 ```python
 # save for later
-resp.save("downloads.csv")
+data.save("downloads.csv")
 
 # reload and download in another session
-resp = sage_data_client.load_downloads("downloads.csv")
-resp.download_all(dest="./data")
+data = sage_data_client.load_downloads("downloads.csv")
+data.download_all(dest="./data")
 ```
 
 ### `sagecli` CLI

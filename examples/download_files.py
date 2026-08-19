@@ -15,14 +15,14 @@ VSN = "W020"
 
 # Query for uploaded files from the last hour.
 # This only contacts the data API once — no files are fetched yet.
-resp = sage_data_client.query_downloads(
+data = sage_data_client.query_downloads(
     start="-1h",
     filter={"vsn": VSN},
 )
 
-print(resp)  # e.g. DownloadResponse(27 records)
+print(data)  # e.g. DownloadResponse(27 records)
 
 # Download all files. Credentials are loaded automatically from ~/.sage/credentials.
 # Files are organized as ./data/{vsn}/{filename} by default.
 # Already-downloaded files are skipped automatically.
-resp.download_all(dest="./data")
+data.download_all(dest="./data")
