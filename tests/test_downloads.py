@@ -192,6 +192,44 @@ class TestRetry(unittest.TestCase):
                     _download_with_retry("http://example.com/file.jpg", dest, max_retries=5)
                 self.assertEqual(ctx.exception.code, 404)
 
+    def test_no_retry_on_403(self):
+        from urllib.error import HTTPError
+
+        with tempfile.TemporaryDirectory() as tmp:
+            dest = Path(tmp) / "file.jpg"
+            err = HTTPError("http://x", 403, "Forbidden", {}, None)
+
+            with patch("sage_data_client.downloads.urlopen", side_effect=err):
+                with patch("sage_data_client.downloads.time.sleep") as mock_sleep:
+                    with self.assertRaises(HTTPError) as ctx:
+                        _download_with_retry("http://example.com/file.jpg", dest, max_retries=5)
+                    self.assertEqual(ctx.exception.code, 403)
+                    mock_sleep.assert_not_called()
+
+    def test_403_summarized_once_per_node_in_download_all(self):
+        from urllib.error import HTTPError
+
+        rows = [
+            _make_row(vsn=TEST_VSN, filename="a.jpg"),
+            _make_row(vsn=TEST_VSN, filename="b.jpg"),
+            _make_row(vsn=TEST_VSN, filename="c.jpg"),
+        ]
+        resp = DownloadResponse(pd.DataFrame(rows))
+        err = HTTPError("http://x", 403, "Forbidden", {}, None)
+
+        with tempfile.TemporaryDirectory() as tmp:
+            with patch.object(DownloadRecord, "download", side_effect=err):
+                with patch("builtins.print") as mock_print:
+                    try:
+                        resp.download_all(dest=tmp)
+                    except DownloadError:
+                        pass
+                    printed = " ".join(str(c) for c in mock_print.call_args_list)
+                    # node appears once in the summary, not once per file
+                    self.assertEqual(printed.count(TEST_VSN), 1)
+                    self.assertIn("3 file(s)", printed)
+                    self.assertIn("My Nodes", printed)
+
     def test_sends_basic_auth_header(self):
         import base64
         with tempfile.TemporaryDirectory() as tmp:

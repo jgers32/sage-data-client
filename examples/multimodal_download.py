@@ -11,6 +11,7 @@ Equivalent CLI command for the media downloads:
         --dest ./data/media \
         --layout "{date}/{vsn}/{task}/{filename}"
 """
+
 import sage_data_client
 import pandas as pd
 
@@ -33,7 +34,6 @@ START = "2026-05-06"
 END = "2026-07-09"
 
 # --- Download media files ---
-
 media_dfs = []
 for vsn in VSNS:
     for task in MEDIA_TASKS:
@@ -50,11 +50,10 @@ media = sage_data_client.DownloadResponse(pd.concat(media_dfs, ignore_index=True
 print("\nDownloading {} media file(s)...".format(len(media)))
 media.download_all(dest="./data/media", layout="{date}/{vsn}/{task}/{filename}")
 
-# Save the manifest so it can be reloaded without re-querying.
+# Save the manifest so it can be reloaded later without re-querying.
 media.save("./data/media_manifest.csv")
 
 # --- Query sensor timeseries ---
-
 sensor_dfs = []
 for vsn in VSNS:
     for task in SENSOR_TASKS:
