@@ -199,6 +199,8 @@ class DownloadResponse:
         total = len(self._records)
         results: List[Path] = []
         errors = []
+        denied_nodes: set = set()
+        denied_count = 0
 
         with ThreadPoolExecutor(max_workers=workers) as pool:
             futures = {
@@ -220,10 +222,17 @@ class DownloadResponse:
                 try:
                     path = future.result()
                     results.append(path)
-                    print("[{}/{}] {}".format(done, total, path))
                 except Exception as e:
                     errors.append((record, e))
-                    print("[{}/{}] FAILED {}: {}".format(done, total, record.url, e))
+                    if isinstance(e, HTTPError) and e.code == 403:
+                        denied_count += 1
+                        denied_nodes.add(record.vsn)
+                print("\rDownloading... [{}/{}]".format(done, total), end="", flush=True)
+            print()
+
+        if denied_count > 0:
+            print("Access denied for {} file(s) on node(s): {}. Check 'My Nodes' in the Sage portal to verify access.".format(
+                denied_count, ", ".join(sorted(denied_nodes))))
 
         if errors:
             raise DownloadError(

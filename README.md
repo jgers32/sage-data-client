@@ -27,7 +27,9 @@ Note: If you are using Linux, you may need to install the `python3-venv` package
 
 ## Downloading Files
 
-Sage nodes upload files (images, audio, etc.) that can be queried and downloaded. However, access to such data can require a Sage portal account and requesting access. Please refer to [Getting Started with Sage](https://sagecontinuum.org/docs/getting-started) for more information. 
+Some Sage tasks produce media files — images, audio clips, video — and upload them to storage. The download commands below are for fetching those files. If you're looking for sensor measurements (temperature, humidity, etc.), see [Querying Sensor Data](#querying-sensor-data) instead.
+
+Access to file downloads may require a Sage portal account. Please refer to [Getting Started with Sage](https://sagecontinuum.org/docs/getting-started) for more information.
 
 ### 1. Save your credentials
 
@@ -52,8 +54,11 @@ sagecli download --start 2026-07-01 --end 2026-08-10 --vsn W020 --dest ./data
 # multiple nodes at once
 sagecli download --date 2026-07-01 --vsn W020 W039 W023 --dest ./data
 
-# filter by task
+# filter by a single task
 sagecli download --start -6h --vsn W020 --task imagesampler-right
+
+# filter by multiple tasks (runs one query per task, results are combined)
+sagecli download --start -6h --vsn W020 --task imagesampler-left imagesampler-right
 
 # preview what would be downloaded without fetching
 sagecli download --date 2026-07-01 --vsn W020 --dry-run
@@ -243,7 +248,7 @@ Key `sagecli download` flags:
 * `--date 2026-07-01` — all files for a single day.
 * `--start TIME --end TIME` — date range; bare dates are treated as inclusive.
 * `--vsn W020 W039 W023` — one or more node VSNs.
-* `--task TASK` — filter by task name.
+* `--task TASK [TASK ...]` — filter by one or more task names.
 * `--layout TEMPLATE` — customize output structure (default: `{vsn}/{filename}`).
 * `--dry-run` — preview what would be downloaded without fetching anything.
 * `--workers N` — number of concurrent downloads (default: 4).

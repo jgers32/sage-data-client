@@ -2,8 +2,8 @@
 sagecli - Command line interface for Sage data downloads.
 
 Commands:
-  login     Save your API token to ~/.sage/credentials
-  download  Download uploaded files matching a query
+  sagecli login         Save username & token to ~/.sage/credentials
+  sagecli download      Download uploaded files matching specific query
 """
 import argparse
 import getpass
@@ -70,31 +70,27 @@ def cmd_download(args):
         start = args.start
         end = _end_of_day(args.end) if args.end else None
 
-    # build filter from named flags + --filter overrides
-    filter_dict = {}
-    if args.task:
-        filter_dict["task"] = args.task
-    if args.node:
-        filter_dict["node"] = args.node
-    if args.filter:
-        for kv in args.filter:
-            if "=" not in kv:
-                print("Error: invalid filter '{}', expected KEY=VALUE".format(kv), file=sys.stderr)
-                sys.exit(1)
-            k, v = kv.split("=", 1)
-            filter_dict[k.strip()] = v.strip()
-
-    # one query per VSN, combined into a single response
+    # one query per VSN+task combination, combined into a single response
     vsns = args.vsn or [None]
+    tasks = args.task or [None]
     dfs = []
     for vsn in vsns:
-        f = dict(filter_dict)
-        if vsn:
-            f["vsn"] = vsn
-        label = "vsn={}, ".format(vsn) if vsn else ""
-        print("Querying uploads ({}{} to {})...".format(label, start, end or "now"))
-        data = query_downloads(start=start, end=end, filter=f or None)
-        dfs.append(data.df)
+        for task in tasks:
+            f = {}
+            if vsn:
+                f["vsn"] = vsn
+            if task:
+                f["task"] = task
+            parts = []
+            if vsn:
+                parts.append("vsn={}".format(vsn))
+            if task:
+                parts.append("task={}".format(task))
+            label = ", ".join(parts) + ", " if parts else ""
+            print("Querying uploads ({}{} to {})...".format(label, start, end or "now"))
+            data = query_downloads(start=start, end=end, filter=f or None)
+            print("  {} file(s) found.".format(len(data)))
+            dfs.append(data.df)
 
     combined = DownloadResponse(pd.concat(dfs, ignore_index=True))
 
@@ -135,44 +131,33 @@ def main():
 examples:
   sagecli login
 
-  # all uploads in the last hour from node W020
+  # Download all files from the last hour for W020
   sagecli download --start -1h --vsn W020
 
-  # all uploads on a specific day
+  # Download all files from 2026-07-01 for W020 to ./data
   sagecli download --date 2026-07-01 --vsn W020 --dest ./data
 
-  # date range (both endpoints inclusive)
-  sagecli download --start 2026-07-01 --end 2026-08-10 --vsn W020 --dest ./data
+  # Download all files from 2026-07-01 to 2026-08-10 for W020, W039, and W023
+  sagecli download --start 2026-07-01 --end 2026-08-10 --vsn W020 W039 W023
 
-  # multiple nodes
-  sagecli download --date 2026-07-01 --vsn W020 W039 W023 --dest ./data
+  # Download all files from the last 6 hours for W020, filtering by tasks
+  sagecli download --start -6h --vsn W020 --task imagesampler-left imagesampler-right
 
-  # filter by task
-  sagecli download --start -6h --vsn W020 --task imagesampler-right
-
-  # custom layout, dry run first
+  # Download all files from 2026-07-01 for W020, using a custom layout and dry-run (no files will be downloaded)
   sagecli download --date 2026-07-01 --vsn W020 --layout "{date}/{vsn}/{task}/{filename}" --dry-run
 
-layout variables:
-  {vsn}       node VSN (e.g. W020)
-  {node}      node ID (e.g. 000048b02d3ae27a)
-  {filename}  original filename (e.g. sample.jpg)
-  {date}      date as YYYY-MM-DD
-  {datetime}  datetime as YYYY-MM-DDTHH-MM-SS
-  {task}      task name, and any other metadata field present on the record
+layout variables: {vsn}, {node}, {filename}, {date}, {datetime}, {task}
 """,
     )
 
     subparsers = parser.add_subparsers(dest="command", metavar="COMMAND")
     subparsers.required = True
 
-    # login
     subparsers.add_parser(
         "login",
-        help="Save API token to ~/.sage/credentials",
+        help="Save Sage username & token to ~/.sage/credentials",
     )
 
-    # download
     dl = subparsers.add_parser(
         "download",
         help="Download uploaded files matching a query",
@@ -204,19 +189,9 @@ layout variables:
     )
     dl.add_argument(
         "--task",
+        nargs="+",
         metavar="TASK",
-        help="Filter by task name (e.g. imagesampler-right).",
-    )
-    dl.add_argument(
-        "--node",
-        metavar="NODE",
-        help="Filter by node ID.",
-    )
-    dl.add_argument(
-        "--filter",
-        action="append",
-        metavar="KEY=VALUE",
-        help="Additional metadata filter (repeatable). For fields not covered by named flags.",
+        help="Task name(s) to filter by (e.g. --task imagesampler-right or --task imagesampler-left imagesampler-right).",
     )
     dl.add_argument(
         "--dest",
